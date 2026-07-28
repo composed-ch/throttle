@@ -48,3 +48,9 @@ fmt.Println("serve request", r)
 The request will be served without any delay, but then Alice needs to wait for a minute for her second request.
 
 Check out the test cases in `throttle_test.go` for further understanding.
+
+## TODO
+
+- [ ] consider removing value argument and return value
+- [ ] consider removing entities after a configurable time (e.g. one day)
+- [ ] consider introducing a configurable global request limit (e.g. 10k per day)
