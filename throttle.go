@@ -39,18 +39,37 @@ func New[T comparable, V any](globalRate, entityRate time.Duration) *Throttle[T,
 // Await waits for the throttle object to spawn both a token for the individual
 // entity and globally. If those tokens are spawned within the given timeout,
 // the given value is returned back. Otherwise, TimeoutError is returned.
+// The first token (globally, per entity) is spawned immediately.
 func (t *Throttle[T, V]) Await(entity T, value *V, timeout time.Duration) (*V, error) {
 	timeoutChan := time.NewTimer(timeout)
+
+	awaitGlobalToken := func() (*V, error) {
+		t.EntitySpawnMux.RLocker().Lock()
+		empty := len(t.EntitySpawn) == 0
+		t.EntitySpawnMux.RLocker().Unlock()
+		if empty {
+			// first token spawns immediately
+			return value, nil
+		}
+		select {
+		case <-timeoutChan.C:
+			return nil, TimeoutError
+		case <-t.GlobalSpawn.C:
+			return value, nil
+		}
+	}
 
 	t.EntitySpawnMux.RLocker().Lock()
 	var entityTicker *time.Ticker
 	entityTicker, ok := t.EntitySpawn[entity]
 	t.EntitySpawnMux.Unlock()
 	if !ok {
+		// first token spawns immediately
 		entityTicker = time.NewTicker(t.EntityRate)
 		t.EntitySpawnMux.Lock()
 		t.EntitySpawn[entity] = entityTicker
 		t.EntitySpawnMux.Unlock()
+		return awaitGlobalToken()
 	}
 
 	select {
@@ -59,10 +78,5 @@ func (t *Throttle[T, V]) Await(entity T, value *V, timeout time.Duration) (*V, e
 	case <-entityTicker.C:
 		// process to next step
 	}
-	select {
-	case <-timeoutChan.C:
-		return nil, TimeoutError
-	case <-t.GlobalSpawn.C:
-		return value, nil
-	}
+	return awaitGlobalToken()
 }
