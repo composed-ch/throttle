@@ -51,6 +51,6 @@ Check out the test cases in `throttle_test.go` for further understanding.
 
 ## TODO
 
-- [ ] consider removing value argument and return value
+- [ ] **breaking change**: consider removing value argument and return value
 - [ ] consider removing entities after a configurable time (e.g. one day)
 - [ ] consider introducing a configurable global request limit (e.g. 10k per day)
