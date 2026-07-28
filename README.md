@@ -16,6 +16,10 @@ This throttle library achieves both by defining two intervals:
 
 This is achieved by defining a short global and a much longer by-entity interval.
 
+The first token, both globally and per entity, is spawned immediately. So there is no waiting time for the initial user, and no waiting time beyond the global interval for each subsequent user.
+
+The user only needs to await the _longer_ of the two intervals, nor both durations cumulated.
+
 ## Example
 
 Define a `throttle` allowing requests coming in every second, but only once per minute for a single entity:
