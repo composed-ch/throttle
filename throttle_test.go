@@ -114,7 +114,6 @@ func TestSecondEntityDelayedForEntity(t *testing.T) {
 	}
 }
 
-// TODO: spammer must not influence other user beyond global rate
 func TestSpammerMustNotAffectUserBeyondGlobalRate(t *testing.T) {
 	entityA, entityB := "Spammer", "Egger"
 	valueA, valueB := "spam", "eggs"
