@@ -44,9 +44,9 @@ func (t *Throttle[T, V]) Await(entity T, value *V, timeout time.Duration) (*V, e
 	timeoutChan := time.NewTimer(timeout)
 
 	awaitGlobalToken := func() (*V, error) {
-		t.EntitySpawnMux.RLocker().Lock()
+		t.EntitySpawnMux.RLock()
 		empty := len(t.EntitySpawn) == 0
-		t.EntitySpawnMux.RLocker().Unlock()
+		t.EntitySpawnMux.RUnlock()
 		if empty {
 			// first token spawns immediately
 			return value, nil
@@ -59,24 +59,27 @@ func (t *Throttle[T, V]) Await(entity T, value *V, timeout time.Duration) (*V, e
 		}
 	}
 
-	t.EntitySpawnMux.RLocker().Lock()
+	t.EntitySpawnMux.RLock()
 	var entityTicker *time.Ticker
 	entityTicker, ok := t.EntitySpawn[entity]
-	t.EntitySpawnMux.Unlock()
+	t.EntitySpawnMux.RUnlock()
 	if !ok {
 		// first token spawns immediately
+		result, err := awaitGlobalToken()
+		if err != nil {
+			return nil, err
+		}
 		entityTicker = time.NewTicker(t.EntityRate)
 		t.EntitySpawnMux.Lock()
 		t.EntitySpawn[entity] = entityTicker
 		t.EntitySpawnMux.Unlock()
-		return awaitGlobalToken()
+		return result, nil
 	}
 
 	select {
 	case <-timeoutChan.C:
 		return nil, TimeoutError
 	case <-entityTicker.C:
-		// process to next step
+		return awaitGlobalToken()
 	}
-	return awaitGlobalToken()
 }
