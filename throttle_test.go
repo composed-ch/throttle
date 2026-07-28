@@ -113,3 +113,34 @@ func TestSecondEntityDelayedForEntity(t *testing.T) {
 		t.Errorf("expected timeout, but succeeded")
 	}
 }
+
+// TODO: spammer must not influence other user beyond global rate
+func TestSpammerMustNotAffectUserBeyondGlobalRate(t *testing.T) {
+	entityA, entityB := "Spammer", "Egger"
+	valueA, valueB := "spam", "eggs"
+	th := New[string, string](10*time.Millisecond, 300*time.Millisecond)
+	done := make(chan struct{})
+
+	// spam, spam, spam
+	go func() {
+		th.Await(entityA, &valueA, 100*time.Millisecond)
+		th.Await(entityA, &valueA, 100*time.Millisecond)
+		th.Await(entityA, &valueA, 100*time.Millisecond)
+		done <- struct{}{}
+	}()
+
+	// give me some ham
+	go func() {
+		result, err := th.Await(entityB, &valueB, 50*time.Millisecond)
+		if err != nil {
+			t.Errorf("regular user ran into timeout")
+		}
+		if result != &valueB {
+			t.Errorf("wrong result B")
+		}
+		done <- struct{}{}
+	}()
+
+	<-done
+	<-done
+}
